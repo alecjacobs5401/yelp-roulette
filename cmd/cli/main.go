@@ -20,10 +20,11 @@ var rootCmd = &cobra.Command{
 
 		client := yelp.NewClient(yelp.ClientConfig{Context: context.Background(), AccessToken: accessToken})
 		business, err := client.RandomBusiness(yelp.SearchRequest{
-			Term:     args[0],
-			Location: location,
-			OpenNow:  openNow,
-			Price:    price,
+			Term:          args[0],
+			Location:      location,
+			OpenNow:       openNow,
+			Price:         price,
+			MaxSampleSize: maxSampleSize,
 		})
 		if err != nil {
 			fatalError(err)
@@ -33,10 +34,11 @@ var rootCmd = &cobra.Command{
 }
 
 var (
-	accessToken string
-	location    string
-	openNow     bool
-	price       []string
+	accessToken   string
+	location      string
+	openNow       bool
+	price         []string
+	maxSampleSize int
 )
 
 func init() {
@@ -44,6 +46,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&location, "location", "l", "Santa Barbara, CA", "Location to base search results off of")
 	rootCmd.Flags().BoolVarP(&openNow, "open-now", "", false, "Filters results based on if business is open now")
 	rootCmd.Flags().StringArrayVarP(&price, "price", "p", []string{}, "Pricing levels to filter the search result with: 1 = $, 2 = $$, 3 = $$$, 4 = $$$$")
+	rootCmd.Flags().IntVarP(&maxSampleSize, "max-sample-size", "m", 50, "Maximum sample size for random business selection")
 }
 
 func main() {

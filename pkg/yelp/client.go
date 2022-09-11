@@ -10,7 +10,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const endpoint = "https://api.yelp.com/v3/graphql"
+const (
+	endpoint     = "https://api.yelp.com/v3/graphql"
+	defaultLimit = 50
+)
 
 // NewClient returns a Yelp GraphQL Client Wrapper
 func NewClient(config ClientConfig) *Client {
@@ -30,20 +33,28 @@ func init() {
 
 // Search returns all businesses matching the SearchRequest terms up to a provided maximum sample size
 func (c *Client) Search(params SearchRequest) ([]YelpBusiness, error) {
+	query := searchQuery{}
+	resultsSize := 0
 	variables := map[string]interface{}{
 		"term":     graphql.String(params.Term),
 		"location": graphql.String(params.Location),
-		"limit":    graphql.Int(50),
-		"offset":   graphql.Int(0),
+		"limit":    graphql.Int(defaultLimit),
+		"offset":   graphql.Int(resultsSize),
 		"openNow":  graphql.Boolean(params.OpenNow),
 		"price":    graphql.String(strings.Join(params.Price, ", ")),
 	}
-	query := searchQuery{}
-	if err := c.client.Query(c.context, &query, variables); err != nil {
-		return []YelpBusiness{}, fmt.Errorf("executing query: %w", err)
+
+	businesses := []YelpBusiness{}
+	for resultsSize < params.MaxSampleSize || resultsSize >= int(query.Search.Total) {
+		if err := c.client.Query(c.context, &query, variables); err != nil {
+			return []YelpBusiness{}, fmt.Errorf("executing query: %w", err)
+		}
+		businesses = append(businesses, query.Search.Business...)
+		resultsSize = len(businesses)
+		variables["offset"] = graphql.Int(resultsSize)
 	}
 
-	return query.Search.Business, nil
+	return businesses, nil
 }
 
 func (c *Client) RandomBusiness(params SearchRequest) (YelpBusiness, error) {

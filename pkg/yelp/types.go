@@ -20,10 +20,11 @@ type Client struct {
 
 // SearchRequest represents the parameters the Yelp Search request
 type SearchRequest struct {
-	Term     string
-	Location string
-	OpenNow  bool
-	Price    []string
+	Term          string
+	Location      string
+	OpenNow       bool
+	Price         []string
+	MaxSampleSize int
 }
 
 type searchQuery struct {
