@@ -14,6 +14,7 @@ Flags:
   -t, --access-token string   Yelp Developer API Access Token
   -h, --help                  help for yelp-roulette
   -l, --location string       Location to base search results off of (default "Santa Barbara, CA")
+  -m, --max-sample-size int   Maximum sample size for random business selection (default 50)
       --open-now              Filters results based on if business is open now
   -p, --price stringArray     Pricing levels to filter the search result with: 1 = $, 2 = $$, 3 = $$$, 4 = $$$$
 ```
