@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
+	"bytes"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/alecjacobs5401/yelp-roulette/pkg/yelp"
 	log "github.com/sirupsen/logrus"
@@ -23,7 +23,9 @@ const responseTemplate = `<?xml version="1.0" encoding="UTF-8"?>
 
 func respond(w http.ResponseWriter, m string) {
 	log.Debugf("respond(): %q", m)
-	fmt.Fprintf(w, responseTemplate, m)
+	buffer := bytes.Buffer{}
+	xml.EscapeText(&buffer, []byte(m))
+	fmt.Fprintf(w, responseTemplate, buffer.String())
 }
 
 const helpText = `Welcome to Yelp Roulette!
@@ -33,33 +35,51 @@ Usage:
 Provide a seed search term to select a business. Use key phrases to filter businesses by location, price, etc.
 Key Phrases:
 - "in": Used to provide a location (e.g. Santa Barbara, CA)
+- "within": Provide a search radius with optional units. Default is in meters. (e.g. 10mi, 15 km)
 - "$", "$$", "$$$", "$$$$": price levels of businesses to include. If none are provided, all price levels are included.
 - "open": restrict search to businesses that are currently open.
 Examples:
 - "dinner in Santa Barbara, CA"
 - "breakfast in NYC open $ $$"
+- "italian food in Austin, TX within 10 miles"
 `
 
 func main() {
 	log.SetLevel(log.DebugLevel)
 	log.Info("yelp-roulette server started...")
 
-	client := yelp.NewClient(yelp.ClientConfig{
-		Context:     context.Background(),
-		AccessToken: os.Getenv("YELP_ROULETTE_ACCESS_TOKEN"),
+	http.HandleFunc("/help", func(w http.ResponseWriter, r *http.Request) {
+		log.Debug("help()")
+		fmt.Fprint(w, helpText)
 	})
 
 	http.HandleFunc("/sms", func(w http.ResponseWriter, r *http.Request) {
-		body := r.FormValue("Body")
-		searchRequest, _ := parseBody(body)
-		fmt.Printf("%#v\n", searchRequest)
+		client := yelp.NewClient(yelp.ClientConfig{
+			Context:     r.Context(),
+			AccessToken: os.Getenv("YELP_ROULETTE_ACCESS_TOKEN"),
+		})
 
-		business, err := client.RandomBusiness(searchRequest)
+		body := r.FormValue("Body")
+
+		searchRequest, err := yelp.ParseRequest(body)
 		if err != nil {
-			respond(w, "Sorry, there was an issue processing your request. Please try again later.")
-		} else {
-			respond(w, fmt.Sprintf("%s - %s\n%s", business.Name, business.Price, business.URL))
+			respond(w, fmt.Sprintf("ERROR: %v\n\n%s", err, helpText))
+			return
 		}
+		log.Debugf("%#v\n", searchRequest)
+
+		if searchRequest.Location == "" {
+			respond(w, helpText)
+		} else {
+			business, err := client.RandomBusiness(searchRequest)
+			if err != nil {
+				log.Errorf("querying for random business: %v", err)
+				respond(w, "Sorry, there was an issue processing your request. Please try again later.")
+			} else {
+				respond(w, fmt.Sprintf("%s - %s\n%s", business.Name, business.Price, business.URL))
+			}
+		}
+
 	})
 
 	if err := http.ListenAndServe(getPort(), nil); err != nil {
@@ -74,38 +94,4 @@ func getPort() string {
 	}
 
 	return fmt.Sprintf(":%s", port)
-}
-
-// takes a message and parses out the text into a SearchRequest
-func parseBody(body string) (yelp.SearchRequest, error) {
-	tokens := strings.Split(body, " ")
-
-	inIndex := -1
-	openIndex := -1
-	priceLevels := []string{}
-	locationTokens := []string{}
-	termTokens := []string{}
-	for index, token := range tokens {
-		switch strings.ToLower(token) {
-		case "in":
-			inIndex = index
-		case "open":
-			openIndex = index
-		case "$", "$$", "$$$", "$$$$":
-			priceLevels = append(priceLevels, fmt.Sprint(strings.Count(token, "$")))
-		default:
-			if inIndex >= 0 && index > inIndex {
-				locationTokens = append(locationTokens, token)
-			} else {
-				termTokens = append(termTokens, token)
-			}
-		}
-	}
-
-	return yelp.SearchRequest{
-		Term:     strings.Join(termTokens, " "),
-		Location: strings.Join(locationTokens, " "),
-		OpenNow:  openIndex >= 0,
-		Price:    priceLevels,
-	}, nil
 }

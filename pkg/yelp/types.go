@@ -25,13 +25,14 @@ type SearchRequest struct {
 	OpenNow       bool
 	Price         []string
 	MaxSampleSize int
+	Within        int
 }
 
 type searchQuery struct {
 	Search struct {
 		Total    graphql.Int
 		Business []YelpBusiness
-	} `graphql:"search(term: $term, location: $location, limit: $limit, offset: $offset, price: $price, open_now: $openNow)"`
+	} `graphql:"search(term: $term, location: $location, limit: $limit, offset: $offset, price: $price, open_now: $openNow, radius: $radius)"`
 }
 
 // YelpBusiness represents a Yelp Business returned from the Search query

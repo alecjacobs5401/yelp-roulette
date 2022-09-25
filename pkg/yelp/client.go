@@ -42,6 +42,7 @@ func (c *Client) Search(params SearchRequest) ([]YelpBusiness, error) {
 		"offset":   graphql.Int(resultsSize),
 		"openNow":  graphql.Boolean(params.OpenNow),
 		"price":    graphql.String(strings.Join(params.Price, ", ")),
+		"radius":   graphql.Float(params.Within),
 	}
 
 	businesses := []YelpBusiness{}
