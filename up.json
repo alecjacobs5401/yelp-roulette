@@ -1,0 +1,8 @@
+{
+  "name": "yelp-roulette",
+  "profile": "up",
+  "regions": ["us-west-2"],
+  "lambda": {
+    "runtime": "nodejs16.x"
+  }
+}
