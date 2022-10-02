@@ -17,6 +17,8 @@ Flags:
   -m, --max-sample-size int   Maximum sample size for random business selection (default 50)
       --open-now              Filters results based on if business is open now
   -p, --price stringArray     Pricing levels to filter the search result with: 1 = $, 2 = $$, 3 = $$$, 4 = $$$$
+  -w, --within float          Limit search results to given radius (default 20)
+  -U, --within-unit string    Units for the within option. Allowed units: miles, meters, kilometers (default "miles")
 ```
 
 The Access Token can also be configured by the environment variable `YELP_ROULETTE_ACCESS_TOKEN`
@@ -50,6 +52,17 @@ that are currently open, provide the `--open-now` flag.
 
 ```
 yelp-roulette dinner --open-now
+```
+
+### Limit Search Radius
+
+To hone in or expand the area for returned Businesses/Restaurants, provide a value to
+the `--within` flag.
+
+```
+yelp-roulette fancy dinner --within 15
+yelp-roulette breakfast --within 5000 --within-units m
+yelp-roulette breakfast --within 5 --within-units km
 ```
 
 ## Development
